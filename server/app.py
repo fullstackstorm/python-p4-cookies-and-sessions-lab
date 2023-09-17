@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-
-from flask import Flask, make_response, jsonify, session
+import json
+from flask import Flask, make_response, jsonify, session, request
 from flask_migrate import Migrate
 
 from models import db, Article, User
@@ -22,13 +22,42 @@ def clear_session():
 
 @app.route('/articles')
 def index_articles():
+    articles = Article.query.all()
 
-    pass
+    articles_dict =  [article.to_dict() for article in articles]
 
-@app.route('/articles/<int:id>')
+    response = make_response(articles_dict, 200)
+
+    return response
+
+@app.route('/articles/<int:id>', methods=['GET'])
 def show_article(id):
+    session.setdefault('page_views', 0)
+    session['page_views'] += 1
+    session.modified = True
 
-    pass
+    if session['page_views'] > 3:
+        response = make_response({'message' : 'Maximum pageview limit reached'}, 401)
+        return response
+    else:
+        article = Article.query.filter(Article.id == id).first()
+        article_dict = article.to_dict()
+        # print(session) --> <SecureCookieSession {'page_views': 1}>
+        
+        # response_data = {
+        #     'session': {
+        #         # 'session_id': id,
+        #         'session_value': session['page_views'],  # Corrected this line
+        #         'session_accessed': session.accessed,
+        #     },
+        #     'cookies': [{cookie: request.cookies[cookie]} for cookie in request.cookies],
+        # }
+
+        # response_data.update(article_dict)
+
+        response = article_dict, 200
+
+        return response
 
 if __name__ == '__main__':
-    app.run(port=5555)
+    app.run(port=5555, debug=True)
